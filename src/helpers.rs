@@ -184,6 +184,16 @@ mod tests {
         let app = App::new()
             .resource("/resource1", |r| r.method(Method::GET).f(index))
             .resource("/resource2/", |r| r.method(Method::GET).f(index))
+            .scope("/resource3", |s| {
+                s
+                    .resource("", |r| r.method(Method::GET).f(index))
+                    .resource("/sub1", |r| r.method(Method::GET).f(index))
+                    .resource("/sub2/", |r| r.method(Method::GET).f(index))
+            })
+            .scope("/resource4/", |s| {
+                s
+                    .resource("", |r| r.method(Method::GET).f(index))
+            })
             .default_resource(|r| r.h(NormalizePath::default()))
             .finish();
 
@@ -205,6 +215,14 @@ mod tests {
                 StatusCode::MOVED_PERMANENTLY,
             ),
             ("/resource2/?p1=1&p2=2", "", StatusCode::OK),
+            ("/resource3", "", StatusCode::OK),
+            ("/resource3/", "/resource3", StatusCode::MOVED_PERMANENTLY),
+            ("/resource3/sub1", "", StatusCode::OK),
+            ("/resource3/sub1/", "/resource3/sub1", StatusCode::MOVED_PERMANENTLY),
+            ("/resource3/sub2/", "", StatusCode::OK),
+            ("/resource3/sub2", "/resource3/sub2/", StatusCode::MOVED_PERMANENTLY),
+            ("/resource4/", "", StatusCode::OK),
+            ("/resource4", "/resource4", StatusCode::MOVED_PERMANENTLY),
         ];
         for (path, target, code) in params {
             let req = app.prepare_request(TestRequest::with_uri(path).finish());
@@ -225,6 +243,16 @@ mod tests {
         let app = App::new()
             .resource("/resource1", |r| r.method(Method::GET).f(index))
             .resource("/resource2/", |r| r.method(Method::GET).f(index))
+            .scope("/resource3", |s| {
+                s
+                    .resource("", |r| r.method(Method::GET).f(index))
+                    .resource("/sub1", |r| r.method(Method::GET).f(index))
+                    .resource("/sub2/", |r| r.method(Method::GET).f(index))
+            })
+            .scope("/resource4/", |s| {
+                s
+                    .resource("", |r| r.method(Method::GET).f(index))
+            })
             .default_resource(|r| {
                 r.h(NormalizePath::new(
                     false,
@@ -244,6 +272,14 @@ mod tests {
             ("/resource1/?p1=1&p2=2", StatusCode::MOVED_PERMANENTLY),
             ("/resource2?p1=1&p2=2", StatusCode::NOT_FOUND),
             ("/resource2/?p1=1&p2=2", StatusCode::OK),
+            ("/resource3", StatusCode::OK),
+            ("/resource3/", StatusCode::MOVED_PERMANENTLY),
+            ("/resource3/sub1", StatusCode::OK),
+            ("/resource3/sub1/", StatusCode::MOVED_PERMANENTLY),
+            ("/resource3/sub2/", StatusCode::OK),
+            ("/resource3/sub2", StatusCode::NOT_FOUND),
+            ("/resource4/", StatusCode::OK),
+            ("/resource4", StatusCode::NOT_FOUND),
         ];
         for (path, code) in params {
             let req = app.prepare_request(TestRequest::with_uri(path).finish());
@@ -258,6 +294,11 @@ mod tests {
         let app = App::new()
             .resource("/resource1", |r| r.method(Method::GET).f(index))
             .resource("/resource1/a/b", |r| r.method(Method::GET).f(index))
+            .scope("/resource2", |s| {
+                s
+                    .resource("", |r| r.method(Method::GET).f(index))
+                    .resource("/a/b", |r| r.method(Method::GET).f(index))
+            })
             .default_resource(|r| r.h(NormalizePath::default()))
             .finish();
 
@@ -327,6 +368,18 @@ mod tests {
                 "/resource1/a/b?p=1",
                 StatusCode::MOVED_PERMANENTLY,
             ),
+            ("/resource2/a/b", "", StatusCode::OK),
+            (
+                "//resource2//a//b//",
+                "/resource2/a/b",
+                StatusCode::MOVED_PERMANENTLY,
+            ),
+            ("/resource2/a/b?p=1", "", StatusCode::OK),
+            (
+                "/////resource2/a//b//?p=1",
+                "/resource2/a/b?p=1",
+                StatusCode::MOVED_PERMANENTLY,
+            ),
         ];
         for (path, target, code) in params {
             let req = app.prepare_request(TestRequest::with_uri(path).finish());
@@ -349,6 +402,14 @@ mod tests {
             .resource("/resource2/", |r| r.method(Method::GET).f(index))
             .resource("/resource1/a/b", |r| r.method(Method::GET).f(index))
             .resource("/resource2/a/b/", |r| r.method(Method::GET).f(index))
+            .scope("/resource3", |s| {
+                s
+                    .resource("/a/b", |r| r.method(Method::GET).f(index))
+            })
+            .scope("/resource4/", |s| {
+                s
+                    .resource("/a/b/", |r| r.method(Method::GET).f(index))
+            })
             .default_resource(|r| r.h(NormalizePath::default()))
             .finish();
 
@@ -505,6 +566,18 @@ mod tests {
             (
                 "/////resource2/a///b/?p=1",
                 "/resource2/a/b/?p=1",
+                StatusCode::MOVED_PERMANENTLY,
+            ),
+            ("/resource3/a/b", "", StatusCode::OK),
+            ("/resource3/a/b?p=1", "", StatusCode::OK),
+            (
+                "/resource3/a/b/",
+                "/resource3/a/b",
+                StatusCode::MOVED_PERMANENTLY,
+            ),
+            (
+                "//resource4//a//b//",
+                "/resource4/a/b/",
                 StatusCode::MOVED_PERMANENTLY,
             ),
         ];
